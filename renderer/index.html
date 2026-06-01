@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-code-reporter</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, 'Segoe UI', 'SF Mono', 'Fira Code', monospace;
+  background: #0d1117;
+  color: #e6edf3;
+  width: 100vw; height: 100vh;
+  overflow: hidden;
+}
+.window {
+  width: 100%; height: 100%;
+  background: #161b22;
+  display: flex;
+  flex-direction: column;
+}
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #0d1117;
+  border-bottom: 1px solid #21262d;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: drag;
+}
+.titlebar-dot { width: 8px; height: 8px; border-radius: 50%; background: #3ba55d; }
+.titlebar-left .name { font-size: 12px; font-weight: 600; }
+.titlebar-left .port { font-size: 10px; color: #484f58; font-weight: 400; }
+.window-ctrl {
+  display: flex;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+.window-ctrl button {
+  width: 28px; height: 22px;
+  border: none;
+  background: transparent;
+  color: #484f58;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .12s;
+}
+.window-ctrl .btn-close:hover { background: #f14c4c; color: #fff; }
+.window-ctrl .btn-min:hover   { background: #21262d; color: #e6edf3; }
+.window-ctrl .btn-pin:hover   { background: #21262d; color: #e6edf3; }
+.window-ctrl .btn-pin.pinned  { color: #58a6ff; }
+.window-ctrl .btn-settings { color: #3fb950; font-size: 12px; font-weight: 600; width: auto; padding: 0 8px; }
+.window-ctrl .btn-settings:hover { background: #1f3a2f; color: #7ee787; }
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px;
+  background: #0d1117;
+  border-bottom: 1px solid #21262d;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #484f58;
+}
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: #3ba55d; }
+.status-right { display: flex; gap: 10px; }
+.status-right .num { color: #8b949e; font-weight: 600; }
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-thumb { background: #21262d; border-radius: 2px; }
+
+.empty-state {
+  text-align: center;
+  padding: 100px 20px;
+  color: #484f58;
+}
+.empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+.empty-state h3 { font-size: 13px; color: #8b949e; margin-bottom: 4px; font-weight: 500; }
+.empty-state p { font-size: 11px; color: #484f58; }
+.empty-state code {
+  background: #21262d;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  color: #58a6ff;
+}
+
+.event-card {
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  overflow: hidden;
+  animation: fadeIn .25s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.event-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: #161b22;
+  border-bottom: 1px solid #21262d;
+}
+.event-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  min-width: 0;
+}
+.agent-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.agent-tag.reasonix { background: #1f3a3a; color: #7ee787; }
+.agent-tag.cc-haha  { background: #2d1f4a; color: #d2a8ff; }
+.agent-tag.other    { background: #1f2d3a; color: #79c0ff; }
+.event-file {
+  color: #58a6ff;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.event-time {
+  color: #484f58;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.code-block {
+  padding: 8px 10px;
+  overflow-x: auto;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #e6edf3;
+  background: #0d1117;
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre;
+}
+.code-block::-webkit-scrollbar { width: 3px; height: 3px; }
+.code-block::-webkit-scrollbar-thumb { background: #21262d; border-radius: 2px; }
+.code-block .ln {
+  display: inline-block;
+  width: 20px;
+  text-align: right;
+  color: #484f58;
+  margin-right: 10px;
+  user-select: none;
+  font-size: 10px;
+}
+.code-block .kw  { color: #ff7b72; }
+.code-block .str { color: #a5d6ff; }
+.code-block .fn  { color: #d2a8ff; }
+.code-block .cm  { color: #8b949e; font-style: italic; }
+.code-block .num { color: #79c0ff; }
+
+.event-analysis {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-top: 1px solid #21262d;
+  background: #0d1117;
+  flex-wrap: wrap;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+.tag.ok   { background: #1f3a2f; color: #3fb950; }
+.tag.warn { background: #3a2f1f; color: #dba628; }
+.tag.err  { background: #3a1f1f; color: #f85149; }
+.tag-src { color: #484f58; font-size: 9px; }
+
+.copy-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid #30363d;
+  color: #484f58;
+  cursor: pointer;
+  padding: 1px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 1.5;
+  transition: all .12s;
+  flex-shrink: 0;
+}
+.copy-btn:hover {
+  border-color: #8b949e;
+  color: #8b949e;
+  background: #21262d;
+}
+.copy-btn.copied {
+  border-color: #3fb950;
+  color: #3fb950;
+  background: #1f3a2f;
+}
+
+.ai-btn {
+  margin-left: 4px;
+  background: none;
+  border: 1px solid #30363d;
+  color: #484f58;
+  cursor: pointer;
+  padding: 1px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 1.5;
+  transition: all .12s;
+  flex-shrink: 0;
+}
+.ai-btn:hover {
+  border-color: #58a6ff;
+  color: #58a6ff;
+  background: #0c2d4a;
+}
+.ai-btn.loading {
+  animation: pulse 1s infinite;
+  color: #58a6ff;
+  border-color: #58a6ff;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.ai-result {
+  padding: 6px 10px;
+  border-top: 1px solid #21262d;
+  background: #0c2d4a;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #79c0ff;
+  display: none;
+}
+.ai-result.show { display: block; }
+.ai-result .label {
+  font-size: 10px;
+  color: #58a6ff;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.ai-result .text { color: #c9d1d9; white-space: pre-wrap; }
+.ai-result .error { color: #f85149; }
+.ai-result .copy-ai {
+  margin-top: 4px;
+  background: none;
+  border: 1px solid #30363d;
+  color: #484f58;
+  cursor: pointer;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  line-height: 1.4;
+  transition: all .12s;
+}
+.ai-result .copy-ai:hover {
+  border-color: #8b949e;
+  color: #8b949e;
+  background: #21262d;
+}
+.ai-result .copy-ai.copied {
+  border-color: #3fb950;
+  color: #3fb950;
+  background: #1f3a2f;
+}
+
+/* ===== 设置面板 ===== */
+.settings-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 100;
+}
+.settings-overlay.show { display: flex; align-items: center; justify-content: center; }
+.settings-panel {
+  width: 340px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.5);
+}
+.settings-panel h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6edf3;
+  margin-bottom: 16px;
+}
+.settings-panel label {
+  display: block;
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 4px;
+}
+.settings-panel input {
+  width: 100%;
+  padding: 8px 10px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #e6edf3;
+  font-size: 12px;
+  font-family: 'SF Mono', monospace;
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color .12s;
+}
+.settings-panel input:focus { border-color: #58a6ff; }
+.settings-panel .hint {
+  font-size: 10px;
+  color: #484f58;
+  margin: -8px 0 12px 0;
+}
+.settings-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.settings-btns button {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid #30363d;
+  transition: all .12s;
+}
+.settings-btns .btn-cancel {
+  background: transparent;
+  color: #8b949e;
+}
+.settings-btns .btn-cancel:hover { background: #21262d; }
+.settings-btns .btn-save {
+  background: #238636;
+  color: #fff;
+  border-color: #2ea043;
+}
+.settings-btns .btn-save:hover { background: #2ea043; }
+.settings-btns .btn-save:disabled { opacity: .5; cursor: default; }
+.settings-status {
+  font-size: 11px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: none;
+}
+.settings-status.show { display: block; }
+.settings-status.ok { background: #1f3a2f; color: #3fb950; border: 1px solid #2ea043; }
+.settings-status.err { background: #3a1f1f; color: #f85149; border: 1px solid #da3633; }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <span class="titlebar-dot"></span>
+      <span class="name">agent-code-reporter</span>
+      <span class="port">:5112</span>
+    </div>
+    <div class="window-ctrl">
+      <button class="btn-settings" title="设置" onclick="openSettings()">设置</button>
+      <button class="btn-min" title="最小化">—</button>
+      <button class="btn-pin" title="置顶" id="pinBtn">📌</button>
+      <button class="btn-close" title="关闭">✕</button>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-left">
+      <span class="status-dot"></span>
+      <span>运行中</span>
+    </div>
+    <div class="status-right">
+      <span>事件 <span class="num" id="statEvents">0</span></span>
+      <span>行 <span class="num" id="statLines">0</span></span>
+      <span>重复 <span class="num" id="statDups">0</span></span>
+    </div>
+  </div>
+
+  <div class="content" id="eventList">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">📡</div>
+      <h3>等待 Agent 连接...</h3>
+      <p>安装 skill 后自动推送</p>
+      <p><code>POST localhost:5112/api/report</code></p>
+    </div>
+  </div>
+  <!-- 设置面板 -->
+  <div class="settings-overlay" id="settingsOverlay">
+    <div class="settings-panel">
+      <h3>⚙️ 设置</h3>
+      <div class="settings-status" id="settingsStatus"></div>
+      <label for="apiKeyInput">DeepSeek API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-..." spellcheck="false">
+      <div class="hint">用于 AI 代码深度分析。可在环境变量 DEEPSEEK_API_KEY 中配置</div>
+      <div class="settings-btns">
+        <button class="btn-cancel" onclick="closeSettings()">取消</button>
+        <button class="btn-save" id="btnSaveKey" onclick="saveApiKey()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 窗口控制 =====
+let currentApiKey = ''
+document.querySelector('.btn-close').onclick = () => window.api.close()
+document.querySelector('.btn-min').onclick  = () => window.api.minimize()
+document.querySelector('.btn-pin').onclick  = function() {
+  window.api.togglePin()
+}
+
+window.api.onPinChanged(pinned => {
+  document.querySelector('.btn-pin').classList.toggle('pinned', pinned)
+  document.querySelector('.btn-pin').title = pinned ? '取消置顶' : '置顶'
+})
+
+// ===== 渲染引擎 =====
+function renderCode(code) {
+  return code.split('\n').map((line, i) => {
+    let colored = line
+      .replace(/\b(async|function|const|let|var|return|class|import|export|from|new|if|else|for|of|in|def|try|catch|await|type|interface|extends|implements|yield|throw|switch|case|break|continue|while|do|with)\b/g, '<span class="kw">$1</span>')
+      .replace(/"([^"]*)"/g, '<span class="str">"$1"</span>')
+      .replace(/'([^']*)'/g, "<span class='str'>'$1'</span>")
+      .replace(/\b([A-Z]\w*)\s*\(/g, '<span class="fn">$1</span>(')
+      .replace(/\/\/.*/g, '<span class="cm">$&</span>')
+      .replace(/#.*/g, '<span class="cm">$&</span>')
+      .replace(/\b(\d+)\b/g, '<span class="num">$1</span>')
+    return `<span class="ln">${i+1}</span>${colored || ' '}`
+  }).join('\n')
+}
+
+function render(evs) {
+  const list = document.getElementById('eventList')
+  const empty = document.getElementById('emptyState')
+
+  document.getElementById('statEvents').textContent = evs.length
+  document.getElementById('statLines').textContent = evs.reduce((s, e) => s + (e.content || '').split('\n').length, 0)
+  document.getElementById('statDups').textContent = evs.filter(e => (e.issues || []).some(a => a.t === 'warn')).length
+
+  if (evs.length === 0) {
+    list.innerHTML = empty.outerHTML
+    return
+  }
+  empty.style.display = 'none'
+
+  list.innerHTML = evs.map(ev => {
+    const agent = ev.agent || 'unknown'
+    let aCls = 'other'
+    let emoji = '🤖'
+    if (agent === 'reasonix') { aCls = 'reasonix'; emoji = '🧠' }
+    else if (agent === 'cc-haha') { aCls = 'cc-haha'; emoji = '🤖' }
+
+    const analysis = (ev.issues || []).map(a => {
+      const cls = a.t === 'ok' ? 'ok' : a.t === 'warn' ? 'warn' : 'err'
+      const icon = a.t === 'ok' ? '✅' : a.t === 'warn' ? '⚠️' : '🔧'
+      const src = a.src ? `<span class="tag-src">${a.src}</span>` : ''
+      return `<span class="tag ${cls}">${icon} ${a.text}${src}</span>`
+    }).join('')
+    const time = ev.time || ''
+
+    const evId = ev.id || '0'
+
+    return `<div class="event-card" data-id="${evId}">
+      <div class="event-header">
+        <div class="event-meta">
+          <span class="agent-tag ${aCls}">${emoji} ${agent}</span>
+          <span class="event-file">${ev.path || 'unknown'}</span>
+        </div>
+        <span class="event-time">${time}</span>
+      </div>
+      <div class="code-block">${renderCode(ev.content || '')}</div>
+      <div class="event-analysis">${analysis}<button class="ai-btn" onclick="doAiAnalyze(this)">AI分析</button><button class="copy-btn" onclick="copyCode(this)">📋 复制</button></div>
+      <div class="ai-result"><div class="label">AI 分析</div><div class="text"></div><button class="copy-ai" onclick="copyAiResult(this)">📋 复制分析</button></div>
+    </div>`
+  }).join('')
+}
+
+function copyCode(btn) {
+  const card = btn.closest('.event-card')
+  const codeBlock = card.querySelector('.code-block')
+  const code = codeBlock.textContent || codeBlock.innerText
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '✅ 已复制'
+    btn.classList.add('copied')
+    setTimeout(() => {
+      btn.textContent = '📋 复制'
+      btn.classList.remove('copied')
+    }, 1500)
+  }).catch(() => {
+    btn.textContent = '❌ 失败'
+    setTimeout(() => btn.textContent = '📋 复制', 1500)
+  })
+}
+
+// ===== AI 分析 =====
+async function doAiAnalyze(btn) {
+  const card = btn.closest('.event-card')
+  const id = Number(card.dataset.id)
+  const resultDiv = card.querySelector('.ai-result')
+  const textDiv = resultDiv.querySelector('.text')
+
+  if (resultDiv.classList.contains('show')) {
+    resultDiv.classList.remove('show')
+    return
+  }
+
+  btn.classList.add('loading')
+  btn.textContent = '⏳'
+  textDiv.textContent = ''
+  resultDiv.classList.remove('show')
+
+  try {
+    const result = await window.api.aiAnalyze(id)
+    btn.classList.remove('loading')
+    btn.textContent = '🤖 AI'
+
+    if (result.ok) {
+      textDiv.innerHTML = result.analysis.replace(/\n/g, '<br>')
+      textDiv.className = 'text'
+    } else {
+      textDiv.textContent = result.error || '分析失败'
+      textDiv.className = 'text error'
+    }
+    resultDiv.classList.add('show')
+  } catch (e) {
+    btn.classList.remove('loading')
+    btn.textContent = '🤖 AI'
+    textDiv.textContent = '请求失败: ' + e.message
+    textDiv.className = 'text error'
+    resultDiv.classList.add('show')
+  }
+}
+
+// ===== 复制 AI 分析结果 =====
+function copyAiResult(btn) {
+  const card = btn.closest('.event-card')
+  const textDiv = card.querySelector('.ai-result .text')
+  const text = textDiv.textContent || textDiv.innerText
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅ 已复制'
+    btn.classList.add('copied')
+    setTimeout(() => {
+      btn.textContent = '📋 复制分析'
+      btn.classList.remove('copied')
+    }, 1500)
+  }).catch(() => {
+    btn.textContent = '❌ 失败'
+    setTimeout(() => btn.textContent = '📋 复制分析', 1500)
+  })
+}
+
+// ===== 设置面板 =====
+function openSettings() {
+  document.getElementById('settingsOverlay').classList.add('show')
+  document.getElementById('apiKeyInput').value = currentApiKey
+  document.getElementById('apiKeyInput').focus()
+  document.getElementById('settingsStatus').className = 'settings-status'
+  document.getElementById('settingsStatus').style.display = 'none'
+  document.getElementById('btnSaveKey').disabled = false
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('show')
+}
+
+async function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim()
+  const btn = document.getElementById('btnSaveKey')
+  const status = document.getElementById('settingsStatus')
+  btn.disabled = true
+
+  if (!key) {
+    status.className = 'settings-status show err'
+    status.textContent = '请输入 API Key'
+    btn.disabled = false
+    return
+  }
+
+  const result = await window.api.saveConfig({ deepseekApiKey: key })
+  if (result.ok) {
+    currentApiKey = key
+    status.className = 'settings-status show ok'
+    status.textContent = '✅ 保存成功'
+    setTimeout(closeSettings, 1000)
+  } else {
+    status.className = 'settings-status show err'
+    status.textContent = '保存失败: ' + (result.error || '未知错误')
+    btn.disabled = false
+  }
+}
+
+// 加载配置
+;(async () => {
+  try {
+    const cfg = await window.api.getConfig()
+    currentApiKey = cfg.deepseekApiKey || ''
+  } catch {}
+})()
+
+// ===== 接收 Electron 事件 =====
+window.api.onInit(events => render(events))
+window.api.onNewEvent(events => render(events))
+</script>
+</body>
+</html>

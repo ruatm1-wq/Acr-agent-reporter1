@@ -1,0 +1,39 @@
+{
+  "name": "agent-code-reporter",
+  "version": "1.0.0",
+  "description": "实时代码展示桌面工具 — 接收 AI Agent 推送的代码，实时分析并展示",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.agent-code-reporter",
+    "productName": "Agent Code Reporter",
+    "directories": {
+      "output": "dist"
+    },
+
+    "win": {
+      "target": ["nsis"],
+      "icon": "icon.ico",
+      "sign": false,
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Agent Code Reporter"
+    }
+  },
+  "dependencies": {
+    "web-tree-sitter": "^0.26.9",
+    "tree-sitter-wasm": "^1.0.5"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}
