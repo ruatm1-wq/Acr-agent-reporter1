@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('api', {
   onPinChanged: cb => ipcRenderer.on('pin-changed', (_, val) => cb(val)),
   onMaximizeChanged: cb => ipcRenderer.on('maximize-changed', (_, val) => cb(val)),
 
+  onAiResult: cb => ipcRenderer.on('ai-result', (_, data) => cb(data)),
+
   // 窗口控制
   togglePin: () => ipcRenderer.send('toggle-pin'),
   toggleMaximize: () => ipcRenderer.send('toggle-maximize'),

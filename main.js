@@ -3,7 +3,7 @@ const http = require('http')
 const https = require('https')
 const path = require('path')
 const fs = require('fs')
-const { analyze, initParser } = require('./analyzer')
+const { analyze, initParser, computeDiff } = require('./analyzer')
 
 // ===== 单实例锁 =====
 const gotLock = app.requestSingleInstanceLock()
@@ -83,9 +83,35 @@ const recentPushes = new Map()  // 防止 API 推送和文件监控重复
 
 function pushEvent(ev) {
   events.unshift(ev)
+
+  // 计算 diff：对比同一文件的上一个事件
+  if (ev.content && ev.path) {
+    const len = Math.min(events.length, MAX_EVENTS)
+    for (let i = 1; i < len; i++) {
+      const prev = events[i]
+      if (prev && prev.path === ev.path && prev.content && prev.content !== ev.content) {
+        ev.diff = computeDiff(prev.content, ev.content)
+        break
+      }
+    }
+  }
   if (events.length > MAX_EVENTS) events.length = MAX_EVENTS
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('new-event', events.slice(0, 20))
+  }
+  // 自动 AI 分析
+  const cfg = readConfig()
+  if (cfg.autoAnalyze && ev.content && ev.content.length > 20) {
+    callAI(ev.content, ev.path).then(result => {
+      if (!result.ok) return
+      // 更新事件数组中的 aiResult
+      for (const e of events) {
+        if (e.id === ev.id) { e.aiResult = result.analysis; break }
+      }
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('ai-result', { id: ev.id, result: result.analysis })
+      }
+    }).catch(() => {})
   }
 }
 

@@ -221,9 +221,13 @@ body {
   background: oklch(0.12 0.01 280);
   max-height: 120px;
   overflow-y: auto;
-  white-space: pre;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 .code-block::-webkit-scrollbar { width: 3px; height: 3px; }
+.code-line { display: flex; gap: 0; }
+.code-line.diff-add  { background: oklch(0.25 0.08 150 / 0.15); }
+.code-line.diff-remove { background: oklch(0.25 0.08 25 / 0.15); }
 .code-block::-webkit-scrollbar-thumb { background: oklch(0.2 0.01 280); border-radius: 2px; }
 .code-block .ln {
   display: inline-block;
@@ -524,6 +528,11 @@ body {
 
       <hr style="border:none;border-top:1px solid oklch(0.2 0.01 280);margin:12px 0">
 
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px">
+        <input type="checkbox" id="autoAnalyzeCheck" style="width:auto;margin:0;cursor:pointer">
+        <span style="font-size:11px;color:oklch(0.55 0.01 280)">自动 AI 分析（代码推送后自动分析）</span>
+      </label>
+
       <label for="watchDirInput">监听文件夹</label>
       <div style="display:flex;gap:6px">
         <input type="text" id="watchDirInput" placeholder="D:/projects" style="flex:1">
@@ -558,6 +567,19 @@ window.api.getInitEvents().then(function(events) {
   if (events && events.length) render(events)
 }).catch(function() {})
 
+// 自动 AI 分析结果推送
+window.api.onAiResult(function(data) {
+  var card = document.querySelector('.event-card[data-id="' + data.id + '"]')
+  if (!card) return
+  var resultDiv = card.querySelector('.ai-result')
+  var textDiv = resultDiv.querySelector('.text')
+  var btn = card.querySelector('.ai-btn')
+  if (btn) { btn.classList.remove('loading'); btn.textContent = 'AI' }
+  textDiv.textContent = data.result
+  textDiv.className = 'text'
+  resultDiv.classList.add('show')
+})
+
 // 更新状态栏：监听目录
 function updateWatchStatus() {
   window.api.getWatchDir().then(function(dir) {
@@ -581,8 +603,12 @@ window.api.onMaximizeChanged(maximized => {
 })
 
 // ===== 渲染引擎 =====
-function renderCode(code) {
-  return code.split('\n').map((line, i) => {
+function renderCode(code, diff) {
+  var lines = code.split('\n')
+  // 如果没有 diff 或 diff 行数与代码行数不匹配，用普通渲染
+  var useDiff = diff && diff.lines && diff.lines.length === lines.length
+
+  return lines.map(function(line, i) {
     let colored = line
       .replace(/\b(async|function|const|let|var|return|class|import|export|from|new|if|else|for|of|in|def|try|catch|await|type|interface|extends|implements|yield|throw|switch|case|break|continue|while|do|with)\b/g, '<span class="kw">$1</span>')
       .replace(/"([^"]*)"/g, '<span class="str">"$1"</span>')
@@ -591,8 +617,13 @@ function renderCode(code) {
       .replace(/\/\/.*/g, '<span class="cm">$&</span>')
       .replace(/#.*/g, '<span class="cm">$&</span>')
       .replace(/\b(\d+)\b/g, '<span class="num">$1</span>')
-    return `<span class="ln">${i+1}</span>${colored || ' '}`
-  }).join('\n')
+    var extra = ''
+    if (useDiff && diff.lines[i]) {
+      if (diff.lines[i].type === 'add') extra = ' diff-add'
+      else if (diff.lines[i].type === 'remove') extra = ' diff-remove'
+    }
+    return '<div class="code-line' + extra + '"><span class="ln">' + (i + 1) + '</span>' + (colored || ' ') + '</div>'
+  }).join('')
 }
 
 function render(evs) {
@@ -644,7 +675,7 @@ function render(evs) {
           </div>
           <span class="event-time">${time}</span>
         </div>
-        <div class="code-block">${renderCode(safeContent)}</div>
+        <div class="code-block">${renderCode(safeContent, ev.diff)}</div>
         <div class="event-analysis">${analysis}<button class="ai-btn" onclick="doAiAnalyze(this)">AI</button><button class="copy-btn" onclick="copyCode(this)">复制</button></div>
         <div class="ai-result"><div class="label">AI 分析</div><div class="text"></div></div>
       </div>`
@@ -764,6 +795,8 @@ async function openSettings() {
   document.getElementById('settingsStatus').className = 'settings-status'
   document.getElementById('settingsStatus').style.display = 'none'
   document.getElementById('btnSaveKey').disabled = false
+  var aa = document.getElementById('autoAnalyzeCheck')
+  if (aa) aa.checked = currentConfig.autoAnalyze === true
   try {
     const dir = await window.api.getWatchDir()
     document.getElementById('watchDirInput').value = dir || ''
@@ -852,6 +885,7 @@ async function saveSettings() {
     var cfg = { ...existing, aiProvider: provider }
     if (provider === 'deepseek') cfg.deepseekApiKey = key
     else if (provider === 'glm') cfg.glmApiKey = key
+    cfg.autoAnalyze = document.getElementById('autoAnalyzeCheck')?.checked === true
 
     var r1 = await window.api.saveConfig(cfg)
     if (!r1.ok) throw new Error('配置保存失败: ' + (r1.error || ''))

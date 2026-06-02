@@ -255,4 +255,49 @@ function duplicateCheck(fp, filename, issues) {
   }
 }
 
-module.exports = { analyze, initParser }
+/**
+ * 行级 Diff 计算 — 简单 LCS 算法
+ * @param {string} oldText 旧内容
+ * @param {string} newText 新内容
+ * @returns {{ lines: {text:string, type:'same'|'add'|'remove'}[] }} diff 结果
+ */
+function computeDiff(oldText, newText) {
+  const oldLines = (oldText || '').split('\n')
+  const newLines = (newText || '').split('\n')
+  const oldLen = oldLines.length
+  const newLen = newLines.length
+
+  // LCS 表
+  const dp = Array.from({ length: oldLen + 1 }, () => new Array(newLen + 1).fill(0))
+  for (let i = 1; i <= oldLen; i++) {
+    for (let j = 1; j <= newLen; j++) {
+      if (oldLines[i - 1] === newLines[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1])
+      }
+    }
+  }
+
+  // 回溯构建 diff
+  const result = []
+  let i = oldLen, j = newLen
+  const stack = []
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+      stack.push({ text: oldLines[i - 1], type: 'same' })
+      i--; j--
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      stack.push({ text: newLines[j - 1], type: 'add' })
+      j--
+    } else {
+      stack.push({ text: oldLines[i - 1], type: 'remove' })
+      i--
+    }
+  }
+
+  while (stack.length) result.push(stack.pop())
+  return { lines: result }
+}
+
+module.exports = { analyze, initParser, computeDiff }
