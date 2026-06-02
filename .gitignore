@@ -7,3 +7,7 @@ make-*.js
 code-push.bat
 config.json
 .DS_Store
+mklnk.ps1
+check-ts.js
+test-ts.js
+make-icon.js

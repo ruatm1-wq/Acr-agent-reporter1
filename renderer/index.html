@@ -354,12 +354,16 @@ body {
 .settings-overlay.show { display: flex; align-items: center; justify-content: center; }
 .settings-panel {
   width: 340px;
+  max-height: 80vh;
+  overflow-y: auto;
   background: oklch(0.16 0.015 280);
   border: 1px solid oklch(0.22 0.01 280);
   border-radius: 12px;
   padding: 22px;
   box-shadow: 0 20px 60px oklch(0 0 0 / 0.5);
 }
+.settings-panel::-webkit-scrollbar { width: 4px; }
+.settings-panel::-webkit-scrollbar-thumb { background: oklch(0.25 0.01 280); border-radius: 2px; }
 .settings-panel h3 {
   font-size: 14px;
   font-weight: 600;
@@ -453,27 +457,41 @@ body {
   <div class="content" id="eventList">
     <div class="empty-state" id="emptyState">
       <div class="icon" style="font-size:24px;margin-bottom:8px">⌘</div>
-      <h3 style="margin-bottom:12px">ACR-Agent代码助手</h3>
+      <h3 style="margin-bottom:12px;font-size:14px">ACR-Agent代码助手</h3>
       <div style="text-align:left;max-width:340px;margin:0 auto;font-size:11px;line-height:1.7;color:oklch(0.5 0.01 280)">
 
+        <div style="padding:10px;background:oklch(0.13 0.01 280);border-radius:6px;margin-bottom:8px;border:1px solid oklch(0.2 0.01 280)">
+          <div style="font-size:10px;color:oklch(0.55 0.01 280);margin-bottom:6px;font-weight:600">👋 快速开始</div>
+          <div style="margin-bottom:6px;font-size:10px;color:oklch(0.65 0.02 280)">
+            <b>1. AI Agent 自动推送（推荐）</b><br>
+            把设置里的"Agent 接入指引"发给 AI Agent，它写代码时自动推送到此窗口。
+          </div>
+          <div style="margin-bottom:6px;font-size:10px;color:oklch(0.65 0.02 280)">
+            <b>2. 文件监控</b><br>
+            右上角 <span style="color:oklch(0.65 0.18 150)">设置</span> → 监听文件夹，目录内文件修改自动抓取。
+          </div>
+          <div style="font-size:10px;color:oklch(0.65 0.02 280)">
+            <b>3. MCP 连接</b><br>
+            设置中点击"一键启用"，AI Agent 自动推送代码。
+          </div>
+        </div>
+
         <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px;border-left:2px solid oklch(0.6 0.12 250)">
-          <b style="color:oklch(0.6 0.12 250);font-size:10px">🔌 方式一：MCP 协议（推荐）</b><br>
-          支持 MCP 的 AI Agent 通过 stdio 推送代码到 ACR 窗口。<br>
-          <span style="color:oklch(0.4 0.01 280);font-size:10px">在设置中点击"一键启用"即可自动配置</span>
+          <b style="color:oklch(0.6 0.12 250);font-size:10px">🔌 MCP 协议</b><br>
+          支持 MCP 的 AI Agent 自动推送。<br>
+          <span style="color:oklch(0.4 0.01 280);font-size:10px">设置 → MCP 连接 → 一键启用</span>
         </div>
 
         <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px;border-left:2px solid oklch(0.55 0.15 150)">
-          <b style="color:oklch(0.55 0.15 150);font-size:10px">📡 方式二：API 推送</b><br>
-          把 <code>code-push.skill.md</code> 给 Agent，它会自动推。<br>
-          或直接 POST：<br>
-          <code style="font-size:10px;color:oklch(0.6 0.12 250)">POST http://localhost:5112/api/report</code><br>
+          <b style="color:oklch(0.55 0.15 150);font-size:10px">📡 API 推送</b><br>
+          Agent 直接 POST 代码到：<br>
+          <code style="font-size:10px;color:oklch(0.6 0.12 250)">POST localhost:5112/api/report</code><br>
           <span style="font-size:9px;color:oklch(0.4 0.01 280)">Body: { agent, path, content }</span>
         </div>
 
         <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px;border-left:2px solid oklch(0.65 0.18 150)">
-          <b style="color:oklch(0.65 0.18 150);font-size:10px">📁 方式三：文件监控</b><br>
-          设置监听目录后，任何工具修改文件自动抓取到窗口。<br>
-          <span style="color:oklch(0.4 0.01 280);font-size:10px">点右上角绿色 “设置” → “监听文件夹”</span>
+          <b style="color:oklch(0.65 0.18 150);font-size:10px">📁 文件监控</b><br>
+          <span style="color:oklch(0.4 0.01 280);font-size:10px">设置 → 监听文件夹，自动抓取文件修改</span>
         </div>
 
       </div>
@@ -517,6 +535,41 @@ body {
         <button id="btnBrowseDir" onclick="browseWatchDir()" style="padding:8px 12px;background:oklch(0.18 0.01 280);border:1px solid oklch(0.22 0.01 280);border-radius:6px;color:oklch(0.92 0.01 280);cursor:pointer;font-size:12px;font-family:inherit">浏览</button>
       </div>
       <div class="hint">实时监控此目录的代码文件变化</div>
+
+      <hr style="border:none;border-top:1px solid oklch(0.2 0.01 280);margin:12px 0">
+
+      <details style="margin-bottom:12px;font-size:11px">
+        <summary style="cursor:pointer;font-weight:600;font-size:11px;color:oklch(0.65 0.18 150)">📋 Agent 接入指引（发给 AI Agent）</summary>
+        <div style="margin-top:8px;padding:8px;background:oklch(0.12 0.01 280);border-radius:4px;font-size:10px;line-height:1.6;color:oklch(0.7 0.02 280);white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;user-select:all" id="skillText">
+# ACR 代码推送规则
+
+创建或修改任何代码文件后，必须立即将代码推送到 ACR 桌面工具。
+
+## 推送方式
+
+### HTTP POST（通用）
+curl -X POST http://localhost:5112/api/report \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent": "你的名字",
+    "path": "文件路径",
+    "content": "文件完整内容"
+  }'
+
+### MCP（如支持）
+调用 push_code 工具，参数同上。
+
+## 字段说明
+path（必填）：文件路径
+content（必填）：文件完整内容
+agent（可选）：你的名称
+action（可选）：write/edit/delete
+
+兼容 code→content，file/filePath→path。
+        </div>
+        <button onclick="copySkill()" style="margin-top:6px;padding:3px 10px;background:oklch(0.5 0.15 150);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;font-family:inherit">📋 复制指引</button>
+        <span id="skillCopied" style="display:none;margin-left:6px;font-size:10px;color:oklch(0.65 0.18 150)">已复制</span>
+      </details>
 
       <hr style="border:none;border-top:1px solid oklch(0.2 0.01 280);margin:12px 0">
 
@@ -809,7 +862,7 @@ async function openSettings() {
   } catch {}
 }
 
-// ===== 设置面板 =====
+async function browseWatchDir() {
   var dlg = await window.api.showOpenDialog();
   if (dlg.canceled) return;
   var dir = dlg.filePaths[0];
@@ -826,6 +879,17 @@ async function openSettings() {
 
 function closeSettings() {
   document.getElementById('settingsOverlay').classList.remove('show')
+}
+
+function copySkill() {
+  var text = document.getElementById('skillText')
+  if (!text) return
+  // 提取纯文本（去掉首尾空白）
+  var content = text.textContent || text.innerText
+  navigator.clipboard.writeText(content.trim()).then(function() {
+    var el = document.getElementById('skillCopied')
+    if (el) { el.style.display = 'inline'; setTimeout(function() { el.style.display = 'none' }, 2000) }
+  }).catch(function() {})
 }
 
 async function enableMcp() {

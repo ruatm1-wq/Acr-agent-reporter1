@@ -11,7 +11,7 @@
  *     "mcpServers": {
  *       "acr-reporter": {
  *         "command": "node",
- *         "args": ["D:/我的工作台/03-AI工具/agent-code-reporter/mcp-server.js"]
+ *         "args": ["path/to/acr-reporter/mcp-server.js"]
  *       }
  *     }
  *   }
