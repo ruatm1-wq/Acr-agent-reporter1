@@ -464,7 +464,8 @@ body {
 
         <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px;border-left:2px solid oklch(0.55 0.15 150)">
           <b style="color:oklch(0.55 0.15 150);font-size:10px">📡 方式二：API 推送</b><br>
-          任何 Agent 或脚本 POST 到以下地址即可：<br>
+          把 <code>code-push.skill.md</code> 给 Agent，它会自动推。<br>
+          或直接 POST：<br>
           <code style="font-size:10px;color:oklch(0.6 0.12 250)">POST http://localhost:5112/api/report</code><br>
           <span style="font-size:9px;color:oklch(0.4 0.01 280)">Body: { agent, path, content }</span>
         </div>
