@@ -140,7 +140,7 @@ body {
 /* ===== 空状态 ===== */
 .empty-state {
   text-align: center;
-  padding: 120px 20px;
+  padding: 20px 20px;
   color: oklch(0.35 0.01 280);
 }
 .empty-state .icon { font-size: 28px; margin-bottom: 10px; opacity: 0.6; }
@@ -641,6 +641,8 @@ window.api.onAiResult(function(data) {
   textDiv.textContent = data.result
   textDiv.className = 'text'
   resultDiv.classList.add('show')
+  var copyBtn = resultDiv.querySelector('.copy-ai-btn')
+  if (copyBtn) copyBtn.style.display = 'block'
 })
 
 // 更新状态栏：监听目录
@@ -744,7 +746,7 @@ function render(evs) {
         </div>
         <div class="code-block">${renderCode(safeContent, ev.diff)}</div>
         <div class="event-analysis">${analysis}<button class="ai-btn" onclick="doAiAnalyze(this)">${aiLabel}</button><button class="copy-btn" onclick="copyCode(this)">复制</button></div>
-        <div class="ai-result"><div class="label">AI 分析</div><div class="text"></div></div>
+        <div class="ai-result"><div class="label">AI 分析</div><div class="text"></div><button class="copy-ai-btn" onclick="copyAnalysisResult(this)" style="display:none;margin-top:6px;padding:2px 8px;background:none;border:1px solid oklch(0.55 0.15 150);color:oklch(0.55 0.15 150);border-radius:3px;cursor:pointer;font-size:9px;font-family:inherit">📋 复制分析结果</button></div>
       </div>`
     }).join('')
     // 自动滚动到顶部，显示最新事件
@@ -770,6 +772,19 @@ function copyCode(btn) {
   })
 }
 
+function copyAnalysisResult(btn) {
+  var textDiv = btn.parentElement.querySelector('.text')
+  if (!textDiv) return
+  var text = textDiv.textContent || textDiv.innerText
+  navigator.clipboard.writeText(text.trim()).then(function() {
+    btn.textContent = '✓ 已复制'
+    setTimeout(function() { btn.textContent = '📋 复制分析结果' }, 2000)
+  }).catch(function() {
+    btn.textContent = '失败'
+    setTimeout(function() { btn.textContent = '📋 复制分析结果' }, 2000)
+  })
+}
+
 // ===== AI 分析 =====
 async function doAiAnalyze(btn) {
   const card = btn.closest('.event-card')
@@ -779,6 +794,8 @@ async function doAiAnalyze(btn) {
 
   if (resultDiv.classList.contains('show')) {
     resultDiv.classList.remove('show')
+    var copyBtn = resultDiv.querySelector('.copy-ai-btn')
+    if (copyBtn) copyBtn.style.display = 'none'
     return
   }
 
@@ -805,6 +822,8 @@ async function doAiAnalyze(btn) {
     if (result.ok) {
       textDiv.textContent = result.analysis
       textDiv.className = 'text'
+      var copyBtn = resultDiv.querySelector('.copy-ai-btn')
+      if (copyBtn) copyBtn.style.display = 'block'
     } else {
       textDiv.textContent = result.error || '分析失败'
       textDiv.className = 'text error'

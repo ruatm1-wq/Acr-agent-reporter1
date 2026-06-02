@@ -88,6 +88,13 @@ function stopWatcher() {
 const events = []
 const MAX_EVENTS = 200
 const recentPushes = new Map()  // 防止 API 推送和文件监控重复
+// 定期清理 recentPushes 过期条目（每5分钟）
+setInterval(() => {
+  const now = Date.now()
+  for (const [path, time] of recentPushes) {
+    if (now - time > 10000) recentPushes.delete(path)
+  }
+}, 300000)
 const connectedAgents = new Set()  // 活跃连接来源
 
 function pushEvent(ev) {
@@ -126,8 +133,8 @@ function pushEvent(ev) {
     mainWindow.webContents.send('new-event', events.slice(0, 20))
   }
   // 自动 AI 分析
-  const cfg = readConfig()
-  if (cfg.autoAnalyze && ev.content && ev.content.length > 20) {
+  var cfg2 = global.__cachedConfig || readConfig()
+  if (cfg2.autoAnalyze && ev.content && ev.content.length > 20) {
     callAI(ev.content, ev.path).then(result => {
       if (!result.ok) return
       // 更新事件数组中的 aiResult
@@ -203,6 +210,10 @@ const server = http.createServer((req, res) => {
 function callAI(code, filename) {
   const cfg = readConfig()
   const provider = cfg.aiProvider || 'deepseek'
+
+  // Ollama 需要本地部署，暂不支持自动分析
+  if (provider === 'ollama') return Promise.resolve({ ok: false, error: 'Ollama 本地模型暂不支持 AI 分析，请切换为 DeepSeek 或 GLM' })
+
   const model = provider === 'deepseek' ? 'deepseek-chat' : 'glm-4-flash'
   const apiKey = cfg.deepseekApiKey || cfg.glmApiKey || process.env.DEEPSEEK_API_KEY || ''
   if (!apiKey) return Promise.resolve({ ok: false, error: '请先在设置中配置 API Key' })
@@ -298,7 +309,7 @@ function createWindow() {
   })
   ipcMain.handle('get-config', () => readConfig())
   ipcMain.handle('save-config', (_, cfg) => {
-    try { writeConfig(cfg); return { ok: true } }
+    try { writeConfig(cfg); global.__cachedConfig = cfg; return { ok: true } }
     catch (e) { return { ok: false, error: e.message } }
   })
   ipcMain.handle('show-open-dialog', async () => {
@@ -369,7 +380,8 @@ function createTray() {
 
 // ===== 生命周期 =====
 app.whenReady().then(async () => {
-  const cfg = readConfig()
+  global.__cachedConfig = readConfig()
+  const cfg = global.__cachedConfig
   if (cfg.watchDir) startWatcher(cfg.watchDir)
   await initParser()
   server.listen(PORT)

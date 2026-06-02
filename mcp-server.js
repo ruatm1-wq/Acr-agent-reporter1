@@ -136,11 +136,13 @@ function pushCode(id, args) {
     port: ACR_PORT,
     path: '/api/report',
     method: 'POST',
+    timeout: 5000,
     headers: {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(data)
     }
   }, (res) => {
+    req.setTimeout(0) // 收到响应后取消超时
     let body = ''
     res.on('data', chunk => body += chunk)
     res.on('end', () => {
@@ -162,6 +164,7 @@ function pushCode(id, args) {
     })
   })
 
+  req.on('timeout', () => { req.destroy(); writeError(id, -32000, 'ACR 服务无响应，请确认 ACR 窗口已打开') })
   req.on('error', (e) => {
     writeError(id, -32000, `无法连接 ACR 服务 (${ACR_HOST}:${ACR_PORT}): ${e.message}。请先启动 ACR 桌面应用。`)
   })
