@@ -314,46 +314,6 @@ body {
   border-color: oklch(0.6 0.12 250);
   color: oklch(0.6 0.12 250);
 }
-.guide-btn {
-  padding: 8px 16px;
-  border: 1px solid oklch(0.35 0.02 280);
-  border-radius: 6px;
-  background: oklch(0.15 0.01 280);
-  color: oklch(0.7 0.02 280);
-  cursor: pointer;
-  font-size: 12px;
-  font-family: inherit;
-  transition: all 0.12s;
-}
-.guide-btn:hover {
-  border-color: oklch(0.5 0.12 250);
-  color: oklch(0.6 0.12 250);
-  background: oklch(0.2 0.02 250);
-}
-.guide-content {
-  font-size: 12px;
-  line-height: 1.7;
-  color: oklch(0.7 0.02 280);
-}
-.guide-content code {
-  background: oklch(0.18 0.01 280);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 11px;
-  color: oklch(0.6 0.12 250);
-}
-.guide-content .step {
-  margin: 8px 0;
-  padding: 6px 10px;
-  background: oklch(0.13 0.01 280);
-  border-radius: 4px;
-  border-left: 2px solid oklch(0.55 0.15 150);
-}
-.guide-content .step-num {
-  color: oklch(0.55 0.15 150);
-  font-weight: 600;
-  margin-right: 4px;
-}
 .ai-btn.loading {
   animation: pulse 1s infinite;
   color: oklch(0.6 0.12 250);
@@ -515,17 +475,6 @@ body {
           <span style="color:oklch(0.4 0.01 280);font-size:10px">点右上角绿色 “设置” → “监听文件夹”</span>
         </div>
 
-      </div>
-    </div>
-
-    <!-- 指引弹窗 --><!-- 指引弹窗 -->
-    <div class="settings-overlay" id="guideOverlay">
-      <div class="settings-panel" style="width:380px">
-        <h3 id="guideTitle">指引</h3>
-        <div class="guide-content" id="guideContent"></div>
-        <div class="settings-btns" style="margin-top:12px">
-          <button class="btn-cancel" id="btnCloseGuide" onclick="closeGuide()">关闭</button>
-        </div>
       </div>
     </div>
   </div>
@@ -817,24 +766,6 @@ async function doAiAnalyze(btn) {
   }
 }
 
-function copyAiResult(btn) {
-  const card = btn.closest('.event-card')
-  const textDiv = card.querySelector('.ai-result .text')
-  const text = textDiv.textContent || textDiv.innerText
-  navigator.clipboard.writeText(text).then(() => {
-    btn.textContent = '已复制'
-    btn.classList.add('copied')
-    setTimeout(() => {
-      btn.textContent = '复制分析'
-      btn.classList.remove('copied')
-    }, 1500)
-  }).catch(() => {
-    btn.textContent = '失败'
-    setTimeout(() => btn.textContent = '复制分析', 1500)
-  })
-}
-
-// ===== 设置面板 =====
 function onProviderChange() {
   const provider = document.getElementById('providerSelect').value
   const keySection = document.getElementById('keySection')
@@ -877,54 +808,7 @@ async function openSettings() {
   } catch {}
 }
 
-// ===== 指引弹窗 =====
-const GUIDES = {
-  api: {
-    title: "安装指引",
-    content: `<div style="background:oklch(0.13 0.01 280);border-radius:4px;padding:8px;margin:8px 0;font-size:11px">
-      <b>方式一：code-push.js 推送（推荐）</b><br>
-      Reasonix 已自动装好，每次写代码后自动推送。<br>
-      也可手动运行：<br>
-      <code>node "D:/我的工作台/03-AI工具/agent-code-reporter/code-push.js" &lt;文件&gt;</code>
-    </div>
-    <div style="background:oklch(0.13 0.01 280);border-radius:4px;padding:8px;margin:8px 0;font-size:11px">
-      <b>方式二：其他 Agent 接入</b><br>
-      任何 Agent 向以下地址 POST 即可推送到窗口：<br>
-      <code>POST http://localhost:5112/api/report</code>
-    </div>
-    <div style="background:oklch(0.13 0.01 280);border-radius:4px;padding:8px;margin:8px 0;font-size:11px">
-      <b>方式三：文件监控（无需配合）</b><br>
-      点击 "设置监控文件" 直接配置监听目录，配好后任何工具修改文件自动抓取。
-    </div>`
-  },
-  watch: {
-    title: "设置监控文件",
-    content: `<div class="step"><span class="step-num">1.</span>点击下方 "打开设置" 按钮</div>
-<div class="step"><span class="step-num">2.</span>在"监听文件夹"输入框填入要监控的目录路径</div>
-<div class="step"><span class="step-num">3.</span>点击 "浏览" 确认，立即生效</div>`
-  }
-}
-
-function showGuide(type) {
-  const guide = GUIDES[type]
-  if (!guide) return
-  document.getElementById('guideTitle').textContent = guide.title
-  document.getElementById('guideContent').innerHTML = guide.content
-  // 如果是监控指引，加载当前目录
-  if (type === 'watch') {
-    window.api.getWatchDir().then(dir => {
-      const el = document.getElementById('guideWatchDir')
-      if (el && dir) el.textContent = dir
-    }).catch(() => {})
-  }
-  document.getElementById('guideOverlay').classList.add('show')
-}
-
-function closeGuide() {
-  document.getElementById('guideOverlay').classList.remove('show')
-}
-
-async function browseWatchDir() {
+// ===== 设置面板 =====
   var dlg = await window.api.showOpenDialog();
   if (dlg.canceled) return;
   var dir = dlg.filePaths[0];

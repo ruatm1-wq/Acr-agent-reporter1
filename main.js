@@ -91,6 +91,13 @@ const recentPushes = new Map()  // 防止 API 推送和文件监控重复
 const connectedAgents = new Set()  // 活跃连接来源
 
 function pushEvent(ev) {
+  // 跳过完全重复的内容（用于 API 重试等场景）
+  if (ev.content && ev.content.length > 20) {
+    for (var p = 0; p < events.length && p < 200; p++) {
+      if (events[p].content === ev.content) return
+    }
+  }
+
   events.unshift(ev)
 
   // 追踪连接来源（非 file-watch / system 的 agent 视为外部连接）
@@ -157,9 +164,19 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       try {
         const data = JSON.parse(body)
+        // 兼容不同 Agent 的字段命名
+        if (!data.content && data.code) data.content = data.code
+        if (!data.path && (data.file || data.filePath)) data.path = data.file || data.filePath
+        if (!data.path && data.file) data.path = data.file
+        if (!data.agent) data.agent = 'agent'
+        if (!data.content || !data.content.trim()) {
+          res.writeHead(400)
+          res.end(JSON.stringify({ ok: false, error: '缺少 content（内容）字段' }))
+          return
+        }
         data.time = data.time || new Date().toLocaleTimeString('zh-CN', { hour12: false })
         data.id = data.id || Date.now()
-        data.issues = analyze(data.content || '', data.path || '')
+        data.issues = analyze(data.content, data.path || 'untitled')
         if (data.path) recentPushes.set(data.path, Date.now())
         pushEvent(data)
         res.writeHead(200, { 'Content-Type': 'application/json' })
