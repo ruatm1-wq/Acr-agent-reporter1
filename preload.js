@@ -27,5 +27,7 @@ contextBridge.exposeInMainWorld('api', {
   showOpenDialog: () => ipcRenderer.invoke('show-open-dialog'),
   getInitEvents: () => ipcRenderer.invoke('get-init-events'),
   getConnectedAgents: () => ipcRenderer.invoke('get-connected-agents'),
-  enableMcp: () => ipcRenderer.invoke('enable-mcp')
+  enableMcp: () => ipcRenderer.invoke('enable-mcp'),
+  clearEvents: () => ipcRenderer.send('clear-events'),
+  removeEvent: id => ipcRenderer.send('remove-event', id)
 })

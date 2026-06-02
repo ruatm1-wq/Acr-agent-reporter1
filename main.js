@@ -255,16 +255,43 @@ function callAI(code, filename) {
 // ===== 窗口 =====
 let mainWindow = null
 let tray = null
+let windowStateSaveTimer = null
+
+function saveWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  try {
+    const cfg = readConfig()
+    cfg.windowState = {
+      x: mainWindow.getPosition()[0],
+      y: mainWindow.getPosition()[1],
+      width: mainWindow.getSize()[0],
+      height: mainWindow.getSize()[1],
+      isMaximized: mainWindow.isMaximized()
+    }
+    writeConfig(cfg)
+  } catch {}
+}
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 440, height: 660, resizable: true,
+  // 恢复窗口状态
+  const saved = readConfig().windowState || {}
+  const winOpts = {
+    width: saved.width || 440,
+    height: saved.height || 660,
+    resizable: true,
     frame: false, transparent: false, backgroundColor: '#0d1117',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true, nodeIntegration: false
     }
-  })
+  }
+  if (saved.x !== undefined && saved.y !== undefined) {
+    winOpts.x = saved.x
+    winOpts.y = saved.y
+  }
+
+  mainWindow = new BrowserWindow(winOpts)
+  if (saved.isMaximized) mainWindow.maximize()
 
   // 先注册 did-finish-load，再 loadFile（防止加载太快 listener 错过事件）
   mainWindow.webContents.on('did-finish-load', () => {
@@ -273,6 +300,16 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'))
   mainWindow.setMinimumSize(360, 480)
+
+  // 窗口状态保存（防抖）
+  mainWindow.on('resize', () => {
+    if (windowStateSaveTimer) clearTimeout(windowStateSaveTimer)
+    windowStateSaveTimer = setTimeout(saveWindowState, 500)
+  })
+  mainWindow.on('move', () => {
+    if (windowStateSaveTimer) clearTimeout(windowStateSaveTimer)
+    windowStateSaveTimer = setTimeout(saveWindowState, 500)
+  })
 
   // IPC: 窗口控制
   ipcMain.on('toggle-pin', () => {
@@ -299,9 +336,9 @@ function createWindow() {
   ipcMain.handle('get-watch-dir', () => watchDir)
   ipcMain.handle('set-watch-dir', (_, dir) => {
     try {
-      const cfg = readConfig()
-      cfg.watchDir = dir
-      writeConfig(cfg)
+      global.__cachedConfig = readConfig()
+      global.__cachedConfig.watchDir = dir
+      writeConfig(global.__cachedConfig)
       startWatcher(dir)
       pushEvent({ agent:'system', action:'info', path:'Watch', content:'', time:new Date().toLocaleTimeString('zh-CN',{hour12:false}), id:Date.now(), issues:[{t:'ok',text:'监控目录: '+dir}] })
       return { ok: true }
@@ -317,6 +354,22 @@ function createWindow() {
   })
   ipcMain.handle('get-init-events', () => events.slice(0, 20))
   ipcMain.handle('get-connected-agents', () => Array.from(connectedAgents))
+  // IPC: 事件管理
+  ipcMain.on('clear-events', () => {
+    events.length = 0
+    connectedAgents.clear()
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('new-event', [])
+    }
+  })
+  ipcMain.on('remove-event', (_, id) => {
+    const idx = events.findIndex(e => e.id === id)
+    if (idx !== -1) events.splice(idx, 1)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('new-event', events.slice(0, 20))
+    }
+  })
+
   ipcMain.handle('enable-mcp', async () => {
     try {
       const mcpPath = path.join(__dirname, 'mcp-server.js')
@@ -367,13 +420,14 @@ function createWindow() {
 }
 
 function createTray() {
-  tray = new Tray(nativeImage.createEmpty())
+  const iconPath = path.join(__dirname, 'icon.png')
+  tray = new Tray(fs.existsSync(iconPath) ? nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 }) : nativeImage.createEmpty())
   const ctx = Menu.buildFromTemplate([
     { label: '显示窗口', click: () => mainWindow.show() },
     { type: 'separator' },
     { label: '退出', click: () => { app.isQuitting = true; app.quit() } }
   ])
-  tray.setToolTip('ACR-Agent代码助手 :5112')
+  tray.setToolTip('Vbcoding代码助手 :5112')
   tray.setContextMenu(ctx)
   tray.on('double-click', () => mainWindow.show())
 }

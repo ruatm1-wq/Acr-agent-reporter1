@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ACR-Agent代码助手</title>
+<title>Vbcoding代码助手</title>
 <style>
 /* ===== 花叔Design · 重构版 =====
      布局不变 · 提升视觉品质
@@ -429,7 +429,7 @@ body {
   <div class="titlebar">
     <div class="titlebar-left">
       <span class="titlebar-dot"></span>
-      <span class="name">ACR-Agent代码助手</span>
+      <span class="name">Vbcoding代码助手</span>
       
     </div>
     <div class="window-ctrl">
@@ -437,7 +437,8 @@ body {
       <button class="btn-min" title="最小化" onclick="window.api.minimize()">—</button>
       <button class="btn-max" title="最大化" id="maxBtn" onclick="toggleMaximize()">□</button>
       <button class="btn-pin" title="置顶" id="pinBtn" onclick="window.api.togglePin()">↑</button>
-      <button class="btn-close" title="关闭" onclick="window.api.close()">✕</button>
+      <button class="btn-clear" title="清空事件 (Ctrl+L)" onclick="clearAllEvents()" style="color:oklch(0.55 0.01 280);font-size:11px">✕</button>
+      <button class="btn-close" title="关闭 (Ctrl+W)" onclick="window.api.close()">✕</button>
     </div>
   </div>
 
@@ -457,7 +458,7 @@ body {
   <div class="content" id="eventList">
     <div class="empty-state" id="emptyState">
       <div class="icon" style="font-size:24px;margin-bottom:8px">⌘</div>
-      <h3 style="margin-bottom:12px;font-size:14px">ACR-Agent代码助手</h3>
+      <h3 style="margin-bottom:12px;font-size:14px">Vbcoding代码助手</h3>
       <div style="text-align:left;max-width:340px;margin:0 auto;font-size:11px;line-height:1.7;color:oklch(0.5 0.01 280)">
 
         <div style="padding:10px;background:oklch(0.13 0.01 280);border-radius:6px;margin-bottom:8px;border:1px solid oklch(0.2 0.01 280)">
@@ -645,14 +646,31 @@ window.api.onAiResult(function(data) {
   if (copyBtn) copyBtn.style.display = 'block'
 })
 
-// 更新状态栏：监听目录
+// 更新状态栏：监听目录 + 运行状态
 function updateWatchStatus() {
   window.api.getWatchDir().then(function(dir) {
     var el = document.getElementById('statWatch')
     if (el) el.textContent = dir ? dir.replace(/^.*[\\\/]/, '') : '-'
+    var statusText = document.getElementById('statusText')
+    if (statusText) statusText.textContent = dir ? '监控中 📁' : '运行中'
   }).catch(function() {})
 }
 updateWatchStatus()
+
+// ===== 事件管理 =====
+function clearAllEvents() {
+  if (confirm('确定清空所有事件？')) {
+    window.api.clearEvents()
+    render([])
+  }
+}
+
+function deleteEvent(id) {
+  window.api.removeEvent(id)
+  // 立即从当前列表移除
+  var card = document.querySelector('.event-card[data-id="' + id + '"]')
+  if (card) card.remove()
+}
 
 // ===== 最大化控制 =====
 function toggleMaximize() {
@@ -743,6 +761,7 @@ function render(evs) {
             <span class="event-file">${shortPath}</span>
           </div>
           <span class="event-time">${time}</span>
+          <button class="btn-del-event" onclick="deleteEvent(${evId})" title="删除此事件" style="background:transparent;border:none;color:oklch(0.35 0.01 280);cursor:pointer;font-size:10px;padding:0 2px;margin-left:4px;opacity:0.3;transition:opacity 0.12s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.3">✕</button>
         </div>
         <div class="code-block">${renderCode(safeContent, ev.diff)}</div>
         <div class="event-analysis">${analysis}<button class="ai-btn" onclick="doAiAnalyze(this)">${aiLabel}</button><button class="copy-btn" onclick="copyCode(this)">复制</button></div>
@@ -975,6 +994,19 @@ async function saveSettings() {
     status.textContent = '' + e.message
   }
 }
+
+// ===== 键盘快捷键 =====
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey || e.metaKey) {
+    switch (e.key) {
+      case 'w': e.preventDefault(); window.api.close(); break
+      case ',': e.preventDefault(); openSettings(); break
+      case 'l': e.preventDefault(); clearAllEvents(); break
+    }
+  } else if (e.key === 'Escape') {
+    window.api.close()
+  }
+})
 
 // 加载配置
 ;(async () => {
