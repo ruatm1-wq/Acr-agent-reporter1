@@ -1,6 +1,6 @@
 {
   "name": "acr-agent-helper",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "实时代码展示桌面工具 — 接收 AI Agent 推送的代码，实时分析并展示",
   "main": "main.js",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "build": {
     "appId": "com.agent-code-reporter",
-    "productName": "Vbcoding代码助手",
+    "productName": "Vibe coding代码助手",
     "directories": {
       "output": "dist"
     },

@@ -427,7 +427,7 @@ function createTray() {
     { type: 'separator' },
     { label: '退出', click: () => { app.isQuitting = true; app.quit() } }
   ])
-  tray.setToolTip('Vbcoding代码助手 :5112')
+  tray.setToolTip('Vibe coding代码助手 :5112')
   tray.setContextMenu(ctx)
   tray.on('double-click', () => mainWindow.show())
 }

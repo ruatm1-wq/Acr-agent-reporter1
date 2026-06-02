@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vbcoding代码助手</title>
+<title>Vibe coding代码助手</title>
 <style>
 /* ===== 花叔Design · 重构版 =====
      布局不变 · 提升视觉品质
@@ -429,7 +429,7 @@ body {
   <div class="titlebar">
     <div class="titlebar-left">
       <span class="titlebar-dot"></span>
-      <span class="name">Vbcoding代码助手</span>
+      <span class="name">Vibe coding代码助手</span>
       
     </div>
     <div class="window-ctrl">
@@ -437,7 +437,6 @@ body {
       <button class="btn-min" title="最小化" onclick="window.api.minimize()">—</button>
       <button class="btn-max" title="最大化" id="maxBtn" onclick="toggleMaximize()">□</button>
       <button class="btn-pin" title="置顶" id="pinBtn" onclick="window.api.togglePin()">↑</button>
-      <button class="btn-clear" title="清空事件 (Ctrl+L)" onclick="clearAllEvents()" style="color:oklch(0.55 0.01 280);font-size:11px">✕</button>
       <button class="btn-close" title="关闭 (Ctrl+W)" onclick="window.api.close()">✕</button>
     </div>
   </div>
@@ -449,7 +448,7 @@ body {
       <span id="agentTags" style="display:inline-flex;gap:4px;margin-left:6px"></span>
     </div>
     <div class="status-right">
-      <span>事件 <span class="num" id="statEvents">0</span></span>
+      <span><span id="btnClearEvents" title="清空事件 (Ctrl+L)" onclick="clearAllEvents()" style="cursor:pointer;font-size:11px;opacity:0.4;transition:opacity 0.12s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.4">🗑️</span> 事件 <span class="num" id="statEvents">0</span></span>
       <span>行 <span class="num" id="statLines">0</span></span>
       <span>监控 <span class="num" id="statWatch">-</span></span>
     </div>
@@ -458,7 +457,7 @@ body {
   <div class="content" id="eventList">
     <div class="empty-state" id="emptyState">
       <div class="icon" style="font-size:24px;margin-bottom:8px">⌘</div>
-      <h3 style="margin-bottom:12px;font-size:14px">Vbcoding代码助手</h3>
+      <h3 style="margin-bottom:12px;font-size:14px">Vibe coding代码助手</h3>
       <div style="text-align:left;max-width:340px;margin:0 auto;font-size:11px;line-height:1.7;color:oklch(0.5 0.01 280)">
 
         <div style="padding:10px;background:oklch(0.13 0.01 280);border-radius:6px;margin-bottom:8px;border:1px solid oklch(0.2 0.01 280)">
@@ -485,9 +484,12 @@ body {
 
         <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px;border-left:2px solid oklch(0.55 0.15 150)">
           <b style="color:oklch(0.55 0.15 150);font-size:10px">📡 API 推送</b><br>
-          Agent 直接 POST 代码到：<br>
-          <code style="font-size:10px;color:oklch(0.6 0.12 250)">POST localhost:5112/api/report</code><br>
-          <span style="font-size:9px;color:oklch(0.4 0.01 280)">Body: { agent, path, content }</span>
+          任何 Agent 或脚本 POST 代码到以下地址：<br>
+          <code style="font-size:10px;color:oklch(0.6 0.12 250)">POST /api/report</code><br>
+          <span style="font-size:9px;color:oklch(0.4 0.01 280)">
+            Body: { agent: "名称", path: "文件路径", content: "文件内容" }<br>
+            兼容字段: code→content, file/filePath→path
+          </span>
         </div>
 
         <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px;border-left:2px solid oklch(0.65 0.18 150)">
