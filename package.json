@@ -5,15 +5,31 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win"
+    "build": "electron-builder --win",
+    "build:dir": "electron-builder --win --dir"
   },
   "build": {
     "appId": "com.agent-code-reporter",
-    "productName": "ACR-Agent代码助手",
+    "productName": "ACR代码助手",
     "directories": {
       "output": "dist"
     },
-
+    "files": [
+      "main.js",
+      "preload.js",
+      "mcp-server.js",
+      "analyzer.js",
+      "renderer/**/*",
+      "icon.*",
+      "config.json"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/tree-sitter-wasm/out",
+        "to": "tree-sitter-wasm",
+        "filter": ["*.wasm"]
+      }
+    ],
     "win": {
       "target": ["nsis"],
       "icon": "icon.ico",
@@ -25,7 +41,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Agent Code Reporter"
+      "shortcutName": "ACR代码助手"
     }
   },
   "dependencies": {
