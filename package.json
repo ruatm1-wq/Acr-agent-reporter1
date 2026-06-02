@@ -1,6 +1,6 @@
 {
   "name": "acr-agent-helper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "实时代码展示桌面工具 — 接收 AI Agent 推送的代码，实时分析并展示",
   "main": "main.js",
   "scripts": {
@@ -27,14 +27,16 @@
       {
         "from": "node_modules/tree-sitter-wasm/out",
         "to": "tree-sitter-wasm",
-        "filter": ["*.wasm"]
+        "filter": [
+          "*.wasm"
+        ]
       }
     ],
     "win": {
-      "target": ["nsis"],
-      "icon": "icon.ico",
-      "sign": false,
-      "signAndEditExecutable": false
+      "target": [
+        "nsis"
+      ],
+      "icon": "icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -45,10 +47,11 @@
     }
   },
   "dependencies": {
-    "web-tree-sitter": "^0.26.9",
-    "tree-sitter-wasm": "^1.0.5"
+    "tree-sitter-wasm": "^1.0.5",
+    "web-tree-sitter": "^0.26.9"
   },
   "devDependencies": {
+    "@electron/asar": "^4.2.0",
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0"
   }
