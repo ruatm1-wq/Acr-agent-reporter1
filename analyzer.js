@@ -232,7 +232,9 @@ function duplicateCheck(fp, filename, issues) {
   if (!fp || fp.length < 30) return
   for (const [cachedFp, info] of fingerprintCache) {
     if (cachedFp === fp) {
-      issues.push({ t: 'warn', text: `代码重复 100%`, src: info.filename })
+      // 跳过自身
+      if (info.filename === filename) continue
+      issues.push({ t: 'warn', text: `代码重复 100%`, src: path.basename(info.filename) })
       return
     }
     const minLen = Math.min(fp.length, cachedFp.length)
@@ -244,7 +246,9 @@ function duplicateCheck(fp, filename, issues) {
       }
       const ratio = same / minLen
       if (ratio > 0.7 && same > 30) {
-        issues.push({ t: 'warn', text: `代码相似 ${Math.round(ratio * 100)}%`, src: info.filename })
+        // 跳过自身
+        if (info.filename === filename) continue
+        issues.push({ t: 'warn', text: `代码相似 ${Math.round(ratio * 100)}%`, src: path.basename(info.filename) })
         return
       }
     }
