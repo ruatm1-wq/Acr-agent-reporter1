@@ -115,6 +115,13 @@ body {
 }
 .status-right { display: flex; gap: 12px; }
 .status-right .num { font-weight: 700; color: oklch(0.75 0.01 280); }
+.agent-badge {
+  display:inline-flex; align-items:center; gap:2px;
+  padding:1px 6px; border-radius:3px;
+  font-size:9px; font-weight:600;
+  background:oklch(0.55 0.15 150 / 0.2); color:oklch(0.7 0.15 150);
+  border:1px solid oklch(0.55 0.15 150 / 0.2);
+}
 
 /* ===== 内容区 ===== */
 .content {
@@ -125,9 +132,10 @@ body {
   flex-direction: column;
   gap: 8px;
 }
-.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar { width: 8px; }
 .content::-webkit-scrollbar-track { background: transparent; }
-.content::-webkit-scrollbar-thumb { background: oklch(0.2 0.01 280); border-radius: 2px; }
+.content::-webkit-scrollbar-thumb { background: oklch(0.25 0.01 280); border-radius: 4px; }
+.content::-webkit-scrollbar-thumb:hover { background: oklch(0.35 0.01 280); }
 
 /* ===== 空状态 ===== */
 .empty-state {
@@ -224,7 +232,9 @@ body {
   white-space: pre-wrap;
   word-break: break-all;
 }
-.code-block::-webkit-scrollbar { width: 3px; height: 3px; }
+.code-block::-webkit-scrollbar { width: 6px; height: 6px; }
+.code-block::-webkit-scrollbar-thumb { background: oklch(0.3 0.01 280); border-radius: 3px; }
+.code-block::-webkit-scrollbar-thumb:hover { background: oklch(0.4 0.01 280); }
 .code-line { display: flex; gap: 0; }
 .code-line.diff-add  { background: oklch(0.25 0.08 150 / 0.15); }
 .code-line.diff-remove { background: oklch(0.25 0.08 25 / 0.15); }
@@ -463,6 +473,7 @@ body {
     <div class="status-left">
       <span class="status-dot"></span>
       <span id="statusText">运行中</span>
+      <span id="agentTags" style="display:inline-flex;gap:4px;margin-left:6px"></span>
     </div>
     <div class="status-right">
       <span>事件 <span class="num" id="statEvents">0</span></span>
@@ -566,6 +577,28 @@ window.api.onNewEvent(function(events) { render(events) })
 window.api.getInitEvents().then(function(events) {
   if (events && events.length) render(events)
 }).catch(function() {})
+
+// 连接来源追踪
+var agentBadges = {}
+
+function addAgentBadge(name) {
+  if (agentBadges[name]) return
+  var el = document.createElement('span')
+  el.className = 'agent-badge'
+  el.textContent = name
+  document.getElementById('agentTags').appendChild(el)
+  agentBadges[name] = el
+}
+
+// 加载已有连接
+window.api.getConnectedAgents().then(function(agents) {
+  if (agents) agents.forEach(addAgentBadge)
+}).catch(function() {})
+
+// 实时新连接
+window.api.onAgentConnected(function(agent) {
+  addAgentBadge(agent)
+})
 
 // 自动 AI 分析结果推送
 window.api.onAiResult(function(data) {

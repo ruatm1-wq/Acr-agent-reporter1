@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('api', {
   onMaximizeChanged: cb => ipcRenderer.on('maximize-changed', (_, val) => cb(val)),
 
   onAiResult: cb => ipcRenderer.on('ai-result', (_, data) => cb(data)),
+  onAgentConnected: cb => ipcRenderer.on('agent-connected', (_, agent) => cb(agent)),
 
   // 窗口控制
   togglePin: () => ipcRenderer.send('toggle-pin'),
@@ -24,5 +25,6 @@ contextBridge.exposeInMainWorld('api', {
   getWatchDir: () => ipcRenderer.invoke('get-watch-dir'),
   setWatchDir: dir => ipcRenderer.invoke('set-watch-dir', dir),
   showOpenDialog: () => ipcRenderer.invoke('show-open-dialog'),
-  getInitEvents: () => ipcRenderer.invoke('get-init-events')
+  getInitEvents: () => ipcRenderer.invoke('get-init-events'),
+  getConnectedAgents: () => ipcRenderer.invoke('get-connected-agents')
 })

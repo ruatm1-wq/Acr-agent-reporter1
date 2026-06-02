@@ -80,9 +80,20 @@ function stopWatcher() {
 const events = []
 const MAX_EVENTS = 200
 const recentPushes = new Map()  // 防止 API 推送和文件监控重复
+const connectedAgents = new Set()  // 活跃连接来源
 
 function pushEvent(ev) {
   events.unshift(ev)
+
+  // 追踪连接来源（非 file-watch / system 的 agent 视为外部连接）
+  if (ev.agent && ev.agent !== 'file-watch' && ev.agent !== 'system') {
+    if (!connectedAgents.has(ev.agent)) {
+      connectedAgents.add(ev.agent)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('agent-connected', ev.agent)
+      }
+    }
+  }
 
   // 计算 diff：对比同一文件的上一个事件
   if (ev.content && ev.path) {
@@ -268,6 +279,7 @@ function createWindow() {
     return await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] })
   })
   ipcMain.handle('get-init-events', () => events.slice(0, 20))
+  ipcMain.handle('get-connected-agents', () => Array.from(connectedAgents))
 }
 
 function createTray() {
