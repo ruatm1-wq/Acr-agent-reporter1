@@ -3,6 +3,7 @@ const http = require('http')
 const https = require('https')
 const path = require('path')
 const fs = require('fs')
+const os = require('os')
 const { analyze, initParser, computeDiff } = require('./analyzer')
 
 // ===== 单实例锁 =====
@@ -48,6 +49,8 @@ function startWatcher(dir) {
       const ext = path.extname(fp).toLowerCase()
       if (!WATCH_EXTS.has(ext)) return
       if (!fs.existsSync(fp)) return
+      // 跳过大于 1MB 的文件
+      try { if (fs.statSync(fp).size > 1048576) return } catch {}
       if (debounceTimers[fp]) clearTimeout(debounceTimers[fp])
       debounceTimers[fp] = setTimeout(() => {
         delete debounceTimers[fp]
@@ -74,6 +77,11 @@ function startWatcher(dir) {
 
 function stopWatcher() {
   if (watcher) { watcher.close(); watcher = null }
+  // 清理所有待处理的防抖定时器
+  for (const key of Object.keys(debounceTimers)) {
+    clearTimeout(debounceTimers[key])
+    delete debounceTimers[key]
+  }
 }
 
 // ===== 事件存储 =====
@@ -129,7 +137,8 @@ function pushEvent(ev) {
 // ===== HTTP 服务 =====
 const PORT = 5112
 const server = http.createServer((req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  var origin = req.headers['origin'] || ''
+  res.setHeader('Access-Control-Allow-Origin', origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1') ? origin : 'http://localhost:5112')
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
@@ -280,6 +289,53 @@ function createWindow() {
   })
   ipcMain.handle('get-init-events', () => events.slice(0, 20))
   ipcMain.handle('get-connected-agents', () => Array.from(connectedAgents))
+  ipcMain.handle('enable-mcp', async () => {
+    try {
+      const mcpPath = path.join(__dirname, 'mcp-server.js')
+      const mcpServer = { command: 'node', args: [mcpPath] }
+      const results = []
+
+      // 常见 MCP 客户端配置文件路径
+      const configs = [
+        { path: path.join(os.homedir(), '.claude', 'settings.json'), key: 'mcpServers' },
+        { path: path.join(os.homedir(), '.config', 'claude', 'settings.json'), key: 'mcpServers' },
+        { path: path.join(os.homedir(), '.config', 'cline', 'mcpSettings.json'), key: 'mcpServers' },
+        { path: path.join(os.homedir(), '.continue', 'config.json'), key: 'experimental.mcpServers' },
+      ]
+
+      const labels = {
+        '.claude': 'Claude Code',
+        'cline': 'Cline',
+        'continue': 'Continue'
+      }
+
+      for (const entry of configs) {
+        try {
+          const dir = path.dirname(entry.path)
+          if (!fs.existsSync(dir)) continue
+          let cfg = {}
+          try { cfg = JSON.parse(fs.readFileSync(entry.path, 'utf8')) } catch {}
+          if (entry.key === 'mcpServers') {
+            cfg.mcpServers = cfg.mcpServers || {}
+            cfg.mcpServers['acr-reporter'] = mcpServer
+          } else if (entry.key === 'experimental.mcpServers') {
+            cfg.experimental = cfg.experimental || {}
+            cfg.experimental.mcpServers = cfg.experimental.mcpServers || {}
+            cfg.experimental.mcpServers['acr-reporter'] = mcpServer
+          }
+          fs.writeFileSync(entry.path, JSON.stringify(cfg, null, 2))
+          // 提取客户端名称
+          var name = 'MCP'
+          for (var key in labels) { if (entry.path.includes(key)) { name = labels[key]; break } }
+          results.push(name)
+        } catch {}
+      }
+
+      return { ok: true, files: results }
+    } catch (e) {
+      return { ok: false, error: e.message }
+    }
+  })
 }
 
 function createTray() {

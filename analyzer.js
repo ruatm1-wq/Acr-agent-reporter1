@@ -297,7 +297,16 @@ function computeDiff(oldText, newText) {
   }
 
   while (stack.length) result.push(stack.pop())
-  return { lines: result }
+
+  // 转换为仅包含新内容的行的标记（renderer 只渲染新内容）
+  var newMarked = []
+  for (var k = 0; k < result.length; k++) {
+    if (result[k].type !== 'remove') {
+      newMarked.push({ text: result[k].text, type: result[k].type })
+    }
+  }
+
+  return { lines: newMarked }
 }
 
 module.exports = { analyze, initParser, computeDiff }

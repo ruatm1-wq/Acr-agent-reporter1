@@ -32,7 +32,7 @@ const SERVER_VERSION = '0.1.0'
 const tools = [
   {
     name: 'push_code',
-    description: '将代码推送到 ACR 桌面窗口实时展示',
+    description: '将你创建或修改的代码文件实时推送到 ACR 桌面窗口展示。在输出代码文件之后，自动调用此工具让用户看到代码内容。参数 content 传入完整文件内容，path 传入文件路径。',
     inputSchema: {
       type: 'object',
       properties: {

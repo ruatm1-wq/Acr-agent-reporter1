@@ -164,7 +164,8 @@ body {
   background: oklch(0.13 0.01 280);
   border: 1px solid oklch(0.2 0.01 280);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
+  flex-shrink: 0;
   animation: fadeIn 0.3s ease;
   transition: border-color 0.15s;
 }
@@ -222,14 +223,17 @@ body {
 .code-block {
   padding: 10px 12px;
   overflow-x: auto;
+  overflow-y: auto;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 11px;
   line-height: 1.6;
   color: oklch(0.92 0.01 280);
   background: oklch(0.12 0.01 280);
-  max-height: 120px;
-  overflow-y: auto;
+  max-height: 35vh;
   white-space: pre-wrap;
+  border: 1px solid oklch(0.55 0.15 150 / 0.3);
+  border-radius: 4px;
+  margin: 4px 0;
   word-break: break-all;
 }
 .code-block::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -238,7 +242,6 @@ body {
 .code-line { display: flex; gap: 0; }
 .code-line.diff-add  { background: oklch(0.25 0.08 150 / 0.15); }
 .code-line.diff-remove { background: oklch(0.25 0.08 25 / 0.15); }
-.code-block::-webkit-scrollbar-thumb { background: oklch(0.2 0.01 280); border-radius: 2px; }
 .code-block .ln {
   display: inline-block;
   width: 22px;
@@ -290,6 +293,11 @@ body {
   transition: all 0.12s;
   flex-shrink: 0;
   font-family: inherit;
+}
+.ai-btn {
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 600;
 }
 .copy-btn { margin-left: auto; }
 .copy-btn:hover, .ai-btn:hover {
@@ -486,18 +494,27 @@ body {
     <div class="empty-state" id="emptyState">
       <div class="icon" style="font-size:24px;margin-bottom:8px">⌘</div>
       <h3 style="margin-bottom:12px">ACR-Agent代码助手</h3>
-      <div style="text-align:left;max-width:320px;margin:0 auto;font-size:11px;line-height:1.7;color:oklch(0.5 0.01 280)">
-        <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px">
-          <b style="color:oklch(0.55 0.15 150);font-size:10px">▶ 方式一：自动监控（推荐）</b><br>
-          配置监听目录后，任何工具修改文件自动抓取。<br>
+      <div style="text-align:left;max-width:340px;margin:0 auto;font-size:11px;line-height:1.7;color:oklch(0.5 0.01 280)">
+
+        <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px;border-left:2px solid oklch(0.6 0.12 250)">
+          <b style="color:oklch(0.6 0.12 250);font-size:10px">🔌 方式一：MCP 协议（推荐）</b><br>
+          支持 MCP 的 AI Agent 通过 stdio 推送代码到 ACR 窗口。<br>
+          <span style="color:oklch(0.4 0.01 280);font-size:10px">在设置中点击"一键启用"即可自动配置</span>
+        </div>
+
+        <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px;border-left:2px solid oklch(0.55 0.15 150)">
+          <b style="color:oklch(0.55 0.15 150);font-size:10px">📡 方式二：API 推送</b><br>
+          任何 Agent 或脚本 POST 到以下地址即可：<br>
+          <code style="font-size:10px;color:oklch(0.6 0.12 250)">POST http://localhost:5112/api/report</code><br>
+          <span style="font-size:9px;color:oklch(0.4 0.01 280)">Body: { agent, path, content }</span>
+        </div>
+
+        <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px;border-left:2px solid oklch(0.65 0.18 150)">
+          <b style="color:oklch(0.65 0.18 150);font-size:10px">📁 方式三：文件监控</b><br>
+          设置监听目录后，任何工具修改文件自动抓取到窗口。<br>
           <span style="color:oklch(0.4 0.01 280);font-size:10px">点右上角绿色 “设置” → “监听文件夹”</span>
         </div>
-        <div style="padding:8px 10px;background:oklch(0.13 0.01 280);border-radius:4px;margin-bottom:6px">
-          <b style="color:oklch(0.6 0.12 250);font-size:10px">▶ 方式二：API 推送</b><br>
-          把 <code>code-push.skill.md</code> 扔给 Agent，它就知道怎么用了。<br>
-          也可直接 POST 到：<br>
-          <code style="font-size:10px;color:oklch(0.6 0.12 250)">POST localhost:5112/api/report</code>
-        </div>
+
       </div>
     </div>
 
@@ -550,6 +567,16 @@ body {
         <button id="btnBrowseDir" onclick="browseWatchDir()" style="padding:8px 12px;background:oklch(0.18 0.01 280);border:1px solid oklch(0.22 0.01 280);border-radius:6px;color:oklch(0.92 0.01 280);cursor:pointer;font-size:12px;font-family:inherit">浏览</button>
       </div>
       <div class="hint">实时监控此目录的代码文件变化</div>
+
+      <hr style="border:none;border-top:1px solid oklch(0.2 0.01 280);margin:12px 0">
+
+      <label style="font-size:11px;color:oklch(0.6 0.12 250);font-weight:600;margin-bottom:8px;display:block">🔌 MCP 连接</label>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;color:oklch(0.55 0.01 280)">自动配置所有已安装的 MCP 客户端</span>
+        <button id="btnEnableMcp" onclick="enableMcp()" style="padding:4px 12px;background:oklch(0.5 0.15 150);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:10px;font-family:inherit">一键启用</button>
+      </div>
+      <div id="mcpStatus" class="settings-status"></div>
 
       <div class="settings-btns">
         <button class="btn-cancel" onclick="closeSettings()">取消</button>
@@ -607,7 +634,7 @@ window.api.onAiResult(function(data) {
   var resultDiv = card.querySelector('.ai-result')
   var textDiv = resultDiv.querySelector('.text')
   var btn = card.querySelector('.ai-btn')
-  if (btn) { btn.classList.remove('loading'); btn.textContent = 'AI' }
+  if (btn) { btn.classList.remove('loading'); btn.textContent = currentConfig.deepseekApiKey ? 'DeepSeek分析' : (currentConfig.glmApiKey ? 'GLM分析' : 'AI分析') }
   textDiv.textContent = data.result
   textDiv.className = 'text'
   resultDiv.classList.add('show')
@@ -699,8 +726,12 @@ function render(evs) {
       const time = ev.time || ''
       const evId = ev.id || '0'
       const safeContent = (ev.content || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'})[c])
+      var aiLabel = 'AI分析'
+      if (currentConfig.deepseekApiKey) aiLabel = 'DeepSeek分析'
+      else if (currentConfig.glmApiKey) aiLabel = 'GLM分析'
 
-      return `<div class="event-card" data-id="${evId}">
+      var rawContent = ev.content || ''
+      return `<div class="event-card" data-id="${evId}" data-raw="${rawContent.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&/g, '&amp;')}">
         <div class="event-header">
           <div class="event-meta">
             <span class="agent-tag ${aCls}">${emoji}</span>
@@ -709,7 +740,7 @@ function render(evs) {
           <span class="event-time">${time}</span>
         </div>
         <div class="code-block">${renderCode(safeContent, ev.diff)}</div>
-        <div class="event-analysis">${analysis}<button class="ai-btn" onclick="doAiAnalyze(this)">AI</button><button class="copy-btn" onclick="copyCode(this)">复制</button></div>
+        <div class="event-analysis">${analysis}<button class="ai-btn" onclick="doAiAnalyze(this)">${aiLabel}</button><button class="copy-btn" onclick="copyCode(this)">复制</button></div>
         <div class="ai-result"><div class="label">AI 分析</div><div class="text"></div></div>
       </div>`
     }).join('')
@@ -722,8 +753,7 @@ function render(evs) {
 
 function copyCode(btn) {
   const card = btn.closest('.event-card')
-  const codeBlock = card.querySelector('.code-block')
-  const code = codeBlock.textContent || codeBlock.innerText
+  const code = card.dataset.raw || card.querySelector('.code-block').innerText || ''
   navigator.clipboard.writeText(code).then(() => {
     btn.textContent = '已复制'
     btn.classList.add('copied')
@@ -749,6 +779,15 @@ async function doAiAnalyze(btn) {
     return
   }
 
+  // 检查是否配置了 API Key
+  var hasKey = currentConfig.deepseekApiKey || currentConfig.glmApiKey
+  if (!hasKey) {
+    textDiv.innerHTML = '未配置 AI 连接，请先到 <a href="#" onclick="openSettings();return false" style="color:oklch(0.6 0.12 250);text-decoration:underline;cursor:pointer">设置</a> 中配置 API Key'
+    textDiv.className = 'text error'
+    resultDiv.classList.add('show')
+    return
+  }
+
   btn.classList.add('loading')
   btn.textContent = '···'
   textDiv.textContent = ''
@@ -757,7 +796,8 @@ async function doAiAnalyze(btn) {
   try {
     const result = await window.api.aiAnalyze(id)
     btn.classList.remove('loading')
-    btn.textContent = 'AI'
+    var ml = currentConfig.deepseekApiKey ? 'DeepSeek分析' : (currentConfig.glmApiKey ? 'GLM分析' : 'AI分析')
+    btn.textContent = ml
 
     if (result.ok) {
       textDiv.textContent = result.analysis
@@ -769,7 +809,8 @@ async function doAiAnalyze(btn) {
     resultDiv.classList.add('show')
   } catch (e) {
     btn.classList.remove('loading')
-    btn.textContent = 'AI'
+    var ml2 = currentConfig.deepseekApiKey ? 'DeepSeek分析' : (currentConfig.glmApiKey ? 'GLM分析' : 'AI分析')
+    btn.textContent = ml2
     textDiv.textContent = '请求失败: ' + e.message
     textDiv.className = 'text error'
     resultDiv.classList.add('show')
@@ -900,6 +941,29 @@ async function browseWatchDir() {
 
 function closeSettings() {
   document.getElementById('settingsOverlay').classList.remove('show')
+}
+
+async function enableMcp() {
+  var btn = document.getElementById('btnEnableMcp')
+  var status = document.getElementById('mcpStatus')
+  btn.textContent = '配置中…'
+  btn.disabled = true
+  try {
+    var r = await window.api.enableMcp()
+    if (r.ok) {
+      var list = r.files && r.files.length ? r.files.join('、') : 'MCP'
+      status.className = 'settings-status show ok'
+      status.textContent = '✅ 已配置: ' + list + '，重启 AI Agent 后生效'
+      btn.textContent = '✓ 已启用'
+    } else {
+      throw new Error(r.error || '配置失败')
+    }
+  } catch (e) {
+    status.className = 'settings-status show err'
+    status.textContent = '❌ ' + e.message
+    btn.textContent = '一键启用'
+    btn.disabled = false
+  }
 }
 
 async function saveSettings() {

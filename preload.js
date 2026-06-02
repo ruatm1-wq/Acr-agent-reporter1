@@ -26,5 +26,6 @@ contextBridge.exposeInMainWorld('api', {
   setWatchDir: dir => ipcRenderer.invoke('set-watch-dir', dir),
   showOpenDialog: () => ipcRenderer.invoke('show-open-dialog'),
   getInitEvents: () => ipcRenderer.invoke('get-init-events'),
-  getConnectedAgents: () => ipcRenderer.invoke('get-connected-agents')
+  getConnectedAgents: () => ipcRenderer.invoke('get-connected-agents'),
+  enableMcp: () => ipcRenderer.invoke('enable-mcp')
 })
